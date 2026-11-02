@@ -78,6 +78,7 @@ public class Auction extends Entity implements Serializable {
     public synchronized void processBid(BidTransaction transaction) throws AuctionException {
         Objects.requireNonNull(transaction, "Giao dịch đặt giá không được null");
         Bidder newBidder = transaction.getBidder();
+        double newBidAmount = roundCurrency(transaction.getBidAmount());
 
         // 1. Kiểm tra tính hợp lệ của lượt đặt giá
         validateBid(transaction);
@@ -85,7 +86,7 @@ public class Auction extends Entity implements Serializable {
         // 2. Kích hoạt anti-sniping (Gia hạn thời gian & đặt lại lịch auto-close nếu ở phút chót)
         applyAntiSniping();
 
-        // 3. Hoàn tiền tạm giữ cho người dẫn đầu cũ (Khóa đồng bộ trên đối tượng Bidder để an toàn đa luồng)
+        // 3. Hoàn tiền tạm giữ cho người dẫn đầu cũ (Khóa đồng bộ trên đối tượng Bidder)
         if (this.highestBidder != null) {
             double refund = roundCurrency(this.currentHighestBid);
             synchronized (this.highestBidder) {
@@ -97,20 +98,26 @@ public class Auction extends Entity implements Serializable {
             } else {
                 System.out.printf("🔄 [SELF-RAISE] Hoàn %.2f cho %s (tự nâng từ %.2f → %.2f, chỉ trừ delta %.2f)%n",
                         refund, this.highestBidder.getUserName(),
-                        this.currentHighestBid, transaction.getBidAmount(),
-                        transaction.getBidAmount() - this.currentHighestBid);
+                        this.currentHighestBid, newBidAmount,
+                        newBidAmount - this.currentHighestBid);
             }
         }
 
-        // 4. Cập nhật trạng thái phiên đấu giá
-        this.currentHighestBid = roundCurrency(transaction.getBidAmount());
+        // 4. Trừ tiền từ ví của Bidder mới NGAY TRONG KHỐI SYNCHRONIZED (Trước khi Auto-Bid chạy!)
+        synchronized (newBidder) {
+            newBidder.setBalance(roundCurrency(newBidder.getBalance() - newBidAmount));
+            newBidder.addTransaction(transaction);
+        }
+
+        // 5. Cập nhật trạng thái phiên đấu giá
+        this.currentHighestBid = newBidAmount;
         this.highestBidder = newBidder;
         this.bidHistory.add(transaction);
 
-        // 5. Thông báo bất đồng bộ tới các Observer
+        // 6. Thông báo bất đồng bộ tới các Observer
         notifyObservers(transaction);
 
-        // 6. Kích hoạt hệ thống đấu giá tự động (Auto-Bid)
+        // 7. Kích hoạt hệ thống đấu giá tự động (Auto-Bid)
         triggerAutoBids();
     }
 
