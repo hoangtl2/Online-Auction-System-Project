@@ -4,16 +4,13 @@ import com.auction.exception.AuctionException;
 import com.auction.model.Auction;
 import com.auction.model.BidTransaction;
 
+import java.util.Objects;
+
 /**
  * ManualBidStrategy — Chiến lược đặt giá thủ công.
  *
- * Bidder trực tiếp nhập số tiền và xác nhận đặt giá.
- * Server nhận request PLACE_BID, tạo BidTransaction và gọi strategy này.
- *
- * Logic:
- *  1. Validate giá (thông qua Auction.processBid — có synchronized)
- *  2. Trừ tiền từ ví Bidder ngay khi đặt thành công
- *  3. Ghi lịch sử giao dịch
+ * Ủy quyền toàn bộ việc kiểm tra điều kiện, trừ/hoàn tiền nguyên tử (atomic)
+ * và kích hoạt Auto-Bid cho phương thức synchronized Auction.processBid().
  */
 public class ManualBidStrategy implements BidStrategy {
 
@@ -21,26 +18,25 @@ public class ManualBidStrategy implements BidStrategy {
 
     private ManualBidStrategy() {}
 
-    /** Lấy instance duy nhất (không cần tạo object mới mỗi request). */
     public static ManualBidStrategy getInstance() {
         return INSTANCE;
     }
 
     @Override
     public void execute(Auction auction, BidTransaction transaction) throws AuctionException {
-        // Delegate toàn bộ validation + concurrency vào processBid() đã synchronized
+        Objects.requireNonNull(auction, "Phiên đấu giá (Auction) không được null");
+        Objects.requireNonNull(transaction, "Giao dịch đặt giá (BidTransaction) không được null");
+
+        // Toàn bộ kiểm tra hợp lệ, hoàn tiền người cũ, trừ tiền người mới,
+        // lưu lịch sử và kích hoạt Auto-Bid đều diễn ra nguyên tử trong processBid()
         auction.processBid(transaction);
 
-        // Trừ tiền từ ví bidder sau khi đặt thành công
-        transaction.getBidder().setBalance(
-            transaction.getBidder().getBalance() - transaction.getBidAmount()
-        );
-
         System.out.printf(
-            "✋ [MANUAL BID] %s đặt $%.2f cho phiên \"%s\"%n",
+            "✋ [MANUAL BID] %s đặt $%.2f cho phiên \"%s\" (Số dư còn: $%.2f)%n",
             transaction.getBidder().getUserName(),
             transaction.getBidAmount(),
-            auction.getItem().getNameItem()
+            auction.getItem().getNameItem(),
+            transaction.getBidder().getBalance()
         );
     }
 
