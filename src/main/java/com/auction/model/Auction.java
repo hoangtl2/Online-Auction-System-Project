@@ -479,7 +479,7 @@ public class Auction extends Entity implements Serializable {
         for (AuctionObserver obs : observers) {
             CompletableFuture.runAsync(() -> obs.onNewBidPlaced(tx), SHARED_NOTIFICATION_POOL);
         }
-    })
+    }
 
     private static double roundCurrency(double value) {
         return Math.round(value * 100.0) / 100.0;
