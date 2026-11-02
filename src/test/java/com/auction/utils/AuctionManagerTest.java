@@ -50,9 +50,11 @@ class AuctionManagerTest {
 
     @Test
     void testGetAuctionById() {
-        // ĐÃ SỬA LỖI 3: Tạo một Item giả thay vì truyền null để tránh văng NullPointerException ở constructor Auction
+        // ĐÃ SỬA LỖI 3: Tạo dữ liệu hợp lệ để constructor Auction không ném lỗi null-check
         Item dummyItem = new Electronics("Dummy", "Desc", 0.0, "Brand", 12);
-        Auction mockAuction = new Auction(dummyItem, null, null, null);
+        Seller seller = new Seller("seller1", "123", "s@gmail.com");
+        LocalDateTime start = LocalDateTime.now();
+        Auction mockAuction = new Auction(dummyItem, seller, start, start.plusHours(1));
 
         when(mockAuctionDAO.findById("A123")).thenReturn(mockAuction);
 
