@@ -1,16 +1,20 @@
-# Compiled class file
+# Compiled class file & Maven build
 *.class
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
 
-# Log file
+# Log & JVM crash files
 *.log
+hs_err_pid*
+replay_pid*
 
-# BlueJ files
-*.ctxt
-
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
-
-# Package Files #
+# Package Files
 *.jar
 *.war
 *.nar
@@ -19,17 +23,33 @@
 *.tar.gz
 *.rar
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
-replay_pid*
-target/
-.vscode/
-
-# Serialized data files — do not commit, regenerated automatically at runtime
+# Legacy Serialized data files (Sẽ xóa bỏ hoàn toàn ở Phase 5)
 *.dat
+*.ser
 auctions_data.dat
 users_data.dat
+data/
 
-# IDE
-.idea/
-*.iml
+# IDE (Chặn ở mọi cấp thư mục con)
+**/.idea/
+**/*.iml
+**/*.ipr
+**/*.iws
+.vscode/
+.settings/
+.classpath
+.project
+*.ctxt
+.mtj.tmp/
+
+# OS generated files (macOS, Windows, Linux)
+**/.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Local Environment & Secrets (Không commit mật khẩu thật lên Git)
+.env
+database.local.properties
