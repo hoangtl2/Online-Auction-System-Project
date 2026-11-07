@@ -32,11 +32,13 @@ public class AutoBidStrategy implements BidStrategy {
         Objects.requireNonNull(auction, "Phiên đấu giá (Auction) không được null");
 
         synchronized (auction) {
+            // 1. Kiểm tra thời gian và đóng phiên đúng chuẩn nếu đã hết hạn
             if (LocalDateTime.now().isAfter(auction.getEndTime())) {
-                auction.setStatus(AuctionStatus.FINISHED);
+                auction.closeAuction();
                 throw new AuctionFinishedException("AutoBid: Phiên đấu giá đã kết thúc vào lúc " + auction.getEndTime());
             }
 
+            // 2. Kiểm tra trạng thái hoạt động của phiên đấu giá
             if (auction.getStatus() != AuctionStatus.RUNNING
                     && auction.getStatus() != AuctionStatus.OPEN
                     && auction.getStatus() != AuctionStatus.APPROVED) {
@@ -45,8 +47,14 @@ public class AutoBidStrategy implements BidStrategy {
                 );
             }
 
-            // Ủy quyền toàn bộ chuỗi đấu giá tự động nguyên tử cho Auction
-            auction.triggerAutoBidsPublic();
+            // 3. Nếu người gọi truyền trực tiếp một BidTransaction kèm theo (VD: từ BidContext hoặc Unit Test)
+            // mà chưa thông qua processBid, thực thi lượt đặt giá đó trước rồi mới kích hoạt chuỗi AutoBid
+            if (transaction != null && auction.getAutoBidRules().isEmpty()) {
+                auction.processBid(transaction);
+            } else {
+                // Ủy quyền toàn bộ chuỗi đấu giá tự động nguyên tử cho Auction
+                auction.triggerAutoBidsPublic();
+            }
         }
     }
 
